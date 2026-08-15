@@ -1,0 +1,66 @@
+name: lint
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  yamllint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ibiqlik/action-yamllint@v3
+        with:
+          file_or_dir: docker-compose.yml litellm/config.yaml.template cloudflared/config.yml.template .github/workflows/lint.yml
+          strict: false
+
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: "./scripts"
+
+  compose-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build a dummy .env (no real secrets — CI only)
+        run: |
+          cp .env.example .env
+          sed -i \
+            -e 's/^LITELLM_MASTER_KEY=.*/LITELLM_MASTER_KEY=sk-ci-dummy-0000000000000000/' \
+            -e 's/^LITELLM_SALT_KEY=.*/LITELLM_SALT_KEY=sk-ci-dummy-salt-0000000000000/' \
+            -e 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=ci-dummy-password/' \
+            -e 's#^DATABASE_URL=.*#DATABASE_URL=postgresql://litellm:ci-dummy-password@postgres:5432/litellm#' \
+            -e 's/^OLLAMA_MODEL=.*/OLLAMA_MODEL=ci-dummy-model/' \
+            -e 's/^CLOUDFLARE_TUNNEL_TOKEN=.*/CLOUDFLARE_TUNNEL_TOKEN=ci-dummy-token/' \
+            .env
+          echo "CLOUDFLARE_TUNNEL_ID=00000000-0000-0000-0000-000000000000" >> .env
+      - name: Render litellm/config.yaml
+        run: |
+          set -a; source .env; set +a
+          envsubst '${LITELLM_MODEL_ALIAS} ${OLLAMA_MODEL} ${OLLAMA_BASE_URL}' \
+            < litellm/config.yaml.template > litellm/config.yaml
+      - name: Render cloudflared/config.yml + dummy credentials (CI only)
+        run: |
+          set -a; source .env; set +a
+          PUBLIC_HOSTNAME="${PUBLIC_AI_BASE_URL#https://}"
+          CLOUDFLARE_TUNNEL_ID="$CLOUDFLARE_TUNNEL_ID" PUBLIC_HOSTNAME="$PUBLIC_HOSTNAME" \
+            envsubst '${CLOUDFLARE_TUNNEL_ID} ${PUBLIC_HOSTNAME}' \
+            < cloudflared/config.yml.template > cloudflared/config.yml
+          echo '{}' > cloudflared/tunnel-credentials.json
+      - name: docker compose config
+        run: docker compose config
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
