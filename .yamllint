@@ -1,0 +1,13 @@
+extends: default
+
+rules:
+  # Long comments/URLs/heredocs are normal in this repo's YAML (docker-compose
+  # comments explaining non-obvious infra decisions, CI script one-liners).
+  line-length: disable
+  # Not needed for docker-compose.yml / GitHub Actions workflow files.
+  document-start: disable
+  # "on:" is a GitHub Actions workflow key, not a YAML 1.1 boolean literal —
+  # only check truthy values, not mapping keys, so "on:"/"off:"-style keys
+  # don't false-positive.
+  truthy:
+    check-keys: false
