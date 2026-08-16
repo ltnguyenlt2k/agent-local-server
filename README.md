@@ -193,6 +193,19 @@ FILE=...|smoke-local|smoke-public`.
 - Disable Windows sleep/hibernate on machine B if you want 24/7
   availability (display can still turn off).
 
+## Deploying to another machine
+
+`deploy/` is a self-contained copy of everything needed to run this
+stack on a *different* machine — docker-compose.yml, env template,
+config templates, and every script, plus its own focused docs
+(`deploy/docs/CONFIGURATION.md`, `deploy/docs/INSTALL-MODEL.md`). Copy
+that folder to the target machine and follow `deploy/README.md`.
+
+It's a generated copy, not a second source of truth — after changing
+`docker-compose.yml`, any `*.template` file, or anything in `scripts/`,
+run `./scripts/sync-deploy.sh` (or `make sync-deploy`) so `deploy/`
+doesn't silently drift from what's actually been tested here.
+
 ## Troubleshooting / Security / Backup / Upgrade
 
 - `docs/troubleshooting.md` — layered debug flow, one section per

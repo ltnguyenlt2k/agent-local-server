@@ -1,0 +1,37 @@
+# Template for litellm/config.yaml — DO NOT edit config.yaml directly,
+# it is generated (and gitignored). Edit this template, then re-run:
+#   ./scripts/render-config.sh
+# (bootstrap.sh and preflight.sh also call this automatically.)
+#
+# Why a template instead of relying on LiteLLM's own `os.environ/...`
+# interpolation everywhere: that syntax is documented/confirmed for
+# litellm_params secret-ish fields and for general_settings.master_key /
+# general_settings.database_url, but NOT confirmed for the top-level
+# model_list[].model_name key on every release. To avoid guessing, the
+# ${VAR} placeholders below are resolved by `envsubst` at render time,
+# before LiteLLM ever parses the file. Only master_key/database_url use
+# LiteLLM's native os.environ/ syntax, which the docs do confirm.
+
+model_list:
+  - model_name: ${LITELLM_MODEL_ALIAS}
+    litellm_params:
+      model: ollama_chat/${OLLAMA_MODEL}
+      api_base: ${OLLAMA_BASE_URL}
+
+# Future providers can be added here without App A changing anything
+# except which `model` value it requests — see docs/architecture.md.
+# - model_name: gemini-agent
+#   litellm_params:
+#     model: gemini/gemini-2.5-pro
+#     api_key: os.environ/GEMINI_API_KEY
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  database_url: os.environ/DATABASE_URL
+
+# Only uncomment/populate if a browser-based App A needs to call this
+# gateway directly from client-side JS (see docs/security.md, "CORS").
+# Never set cors_allowed_origins to "*" on a gateway that holds API keys.
+# litellm_settings:
+#   cors_allowed_origins:
+#     - "https://your-trusted-app.example.com"
