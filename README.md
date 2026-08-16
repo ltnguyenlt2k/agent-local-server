@@ -111,6 +111,17 @@ docker compose up -d
 docker compose ps
 ```
 
+**There is no custom application code in this repo** — nothing for
+`docker compose build` to build. Every service (`postgres`, `litellm`,
+`cloudflared`) runs a pinned, publicly-published image from its
+vendor. `docker compose build` is safe to run out of habit (no service
+defines a `build:` key, so it's an instant no-op); the real work is
+`docker compose pull`, which fetches those exact pinned versions. This
+repo's CI (`compose-config` job) validates on every push that this
+`docker-compose.yml` and these pinned versions are internally
+consistent — so pulling here gets you the same configuration CI last
+validated, not a custom image built for you.
+
 Logs:
 
 ```bash
@@ -195,16 +206,30 @@ FILE=...|smoke-local|smoke-public`.
 
 ## Deploying to another machine
 
-`deploy/` is a self-contained copy of everything needed to run this
-stack on a *different* machine — docker-compose.yml, env template,
-config templates, and every script, plus its own focused docs
-(`deploy/docs/CONFIGURATION.md`, `deploy/docs/INSTALL-MODEL.md`). Copy
-that folder to the target machine and follow `deploy/README.md`.
+There's no separate "deploy package" — this repo *is* it. Nothing here
+builds a custom image (see "Bring the stack up" above), so there's
+nothing to publish or copy out ahead of time. To stand this up on a
+different machine ("máy 2"):
 
-It's a generated copy, not a second source of truth — after changing
-`docker-compose.yml`, any `*.template` file, or anything in `scripts/`,
-run `./scripts/sync-deploy.sh` (or `make sync-deploy`) so `deploy/`
-doesn't silently drift from what's actually been tested here.
+```bash
+git clone <this-repo-url>
+cd agent-local-server
+cp .env.example .env
+nano .env                          # see docs/security.md + docs/cloudflare.md
+./scripts/cloudflare-setup.sh <tunnel-name> ai.yourdomain.com
+./scripts/bootstrap.sh
+```
+
+Same steps as "Quick Start" above, on whichever machine. `.env`, the
+rendered `litellm/config.yaml`/`cloudflared/config.yml`, and
+`cloudflared/tunnel-credentials.json` are gitignored on purpose —
+generate/fill them in on each machine directly (via the scripts above),
+never copy them between machines by hand.
+
+Installing/running Ollama is a separate step from this gateway
+deploy, on whichever machine will do inference (same machine or a
+different one — see `docs/ollama-windows.md` / `docs/ollama-wsl.md`
+and point `OLLAMA_BASE_URL` at it in `.env`).
 
 ## Troubleshooting / Security / Backup / Upgrade
 

@@ -1,4 +1,4 @@
-.PHONY: up down logs preflight render-config status key list-keys revoke-key rotate-key backup restore smoke-local smoke-public cloudflare-setup sync-deploy
+.PHONY: up down logs preflight render-config status key list-keys revoke-key rotate-key backup restore smoke-local smoke-public cloudflare-setup
 
 up:
 	docker compose pull
@@ -45,6 +45,3 @@ smoke-public:
 
 cloudflare-setup:
 	./scripts/cloudflare-setup.sh $(NAME) $(HOSTNAME)
-
-sync-deploy:
-	./scripts/sync-deploy.sh
