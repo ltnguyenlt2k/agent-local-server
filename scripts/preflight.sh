@@ -34,8 +34,15 @@ require_env OLLAMA_MODEL
 require_env LITELLM_MODEL_ALIAS
 log_ok "Ollama/model routing vars set (alias=${LITELLM_MODEL_ALIAS}, model=${OLLAMA_MODEL})"
 
-require_env CLOUDFLARE_TUNNEL_TOKEN
-log_ok "CLOUDFLARE_TUNNEL_TOKEN set ($(mask_secret "${CLOUDFLARE_TUNNEL_TOKEN}"))"
+if [ -n "${CLOUDFLARE_TUNNEL_ID:-}" ]; then
+  [ -f "${REPO_ROOT}/cloudflared/config.yml" ] || die "CLOUDFLARE_TUNNEL_ID is set but cloudflared/config.yml is missing — re-run ./scripts/cloudflare-setup.sh"
+  [ -f "${REPO_ROOT}/cloudflared/tunnel-credentials.json" ] || die "CLOUDFLARE_TUNNEL_ID is set but cloudflared/tunnel-credentials.json is missing — re-run ./scripts/cloudflare-setup.sh"
+  log_ok "Locally-managed tunnel configured (CLOUDFLARE_TUNNEL_ID=${CLOUDFLARE_TUNNEL_ID})"
+elif [ -n "${CLOUDFLARE_TUNNEL_TOKEN:-}" ]; then
+  log_ok "Legacy --token tunnel mode: CLOUDFLARE_TUNNEL_TOKEN set ($(mask_secret "${CLOUDFLARE_TUNNEL_TOKEN}"))"
+else
+  die "Neither CLOUDFLARE_TUNNEL_ID nor CLOUDFLARE_TUNNEL_TOKEN is set — run ./scripts/cloudflare-setup.sh <tunnel-name> <hostname> first"
+fi
 
 if [[ "${PUBLIC_AI_BASE_URL:-}" == "https://ai.example.com" ]] || [ -z "${PUBLIC_AI_BASE_URL:-}" ]; then
   log_warn "PUBLIC_AI_BASE_URL still looks like the placeholder — fine until Phase 4 (Cloudflare), fix before smoke-test-public.sh"
